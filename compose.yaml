@@ -1,0 +1,35 @@
+# Docker Compose file for application with PostgreSQL database
+
+services:
+  # Application server service
+#  server:
+#    hostname: platform
+#    build:
+#      context: .
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+
+  # PostgreSQL database service
+  postgres:
+    hostname: postgres
+    image: postgres
+    restart: always
+    user: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: reimbursement_db
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    volumes:
+      - ./src/main/resources/schema-postgresql.sql:/docker-entrypoint-initdb.d/schema.sql
+
