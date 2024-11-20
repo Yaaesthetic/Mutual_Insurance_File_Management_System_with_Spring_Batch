@@ -167,9 +167,7 @@ mutual-claim-management
    ```
 
 5. API Endpoints:
-   - **Trigger Job**: `http://localhost:8080/api/jobs/start`
-   - **Check Status**: `http://localhost:8080/api/jobs/status`
-
+   - **Trigger Job**: `http://localhost:8080/api/start-batch`
 ---
 
 ## Docker Integration
