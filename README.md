@@ -1,79 +1,71 @@
----
-
 # Mutual Insurance File Management System with Spring Batch
 
-This project is a **Spring Batch** application that automates the management of mutual insurance files. It processes insurance records, validates data, calculates reimbursements based on a database of reference drugs, and archives the processed data into a database.
+This project is a **Spring Batch** application for managing mutual insurance claim records. The system automates file processing, validates data, calculates reimbursement amounts based on reference drug data, and archives the results into a PostgreSQL database. It is designed to streamline insurance file management and ensure accurate reimbursement calculations.
 
 ---
 
 ## Table of Contents
 
 1. [Project Context](#project-context)  
-2. [Objectives](#objectives)  
+2. [Objective](#objective)  
 3. [Features](#features)  
 4. [Folder Structure](#folder-structure)  
-5. [System Workflow](#system-workflow)  
-6. [Configurations](#configurations)  
-7. [How to Run](#how-to-run)  
-8. [Docker Integration](#docker-integration)  
-9. [Future Enhancements](#future-enhancements)
+5. [How It Works](#how-it-works)  
+6. [Setup and Run](#setup-and-run)  
+7. [Docker Integration](#docker-integration)
 
 ---
 
 ## Project Context
 
-In mutual insurance systems, insured persons file claims that include consultations and medical treatments. To optimize and automate claim processing, this project utilizes **Spring Batch** to:
-
-- Automate data processing.
-- Validate claim information.
-- Calculate reimbursement amounts for consultations and prescribed drugs using reference prices and reimbursement rates.
-- Archive the processed data into a database.
+In mutual insurance systems, claims often include consultations and medical treatments. Managing these files involves validating data, calculating reimbursements, and archiving processed information. This project leverages **Spring Batch** to automate and streamline these tasks while ensuring compliance with reimbursement policies.
 
 ---
 
-## Objectives
+## Objective
 
-The main objectives of this project are:
+This application automates the following processes:  
 
-1. **Data Reading**: Read claim data from JSON files containing insured persons, beneficiaries, consultations, and treatments.
-2. **Data Validation**: Ensure essential information is present and accurate.
-3. **Reimbursement Calculation**: Compute total reimbursements using reference drug prices and consultation reimbursement rates.
-4. **Data Archiving**: Save processed claim data into a PostgreSQL database for future use.
+1. **Reading Files**: Extract insurance data from JSON files.  
+2. **Data Validation**: Verify essential details for each claim.  
+3. **Reimbursement Calculation**: Calculate total reimbursement using reference drug prices and fixed consultation percentages.  
+4. **Data Archiving**: Store processed claims in a PostgreSQL database or output files.
 
 ---
 
 ## Features
 
-1. **File Reading**:
-   - Read data from JSON files using `JsonItemReader`.
-   - JSON structure includes:
-     - Insured details: Name, affiliation number, registration.
-     - Beneficiary details: Name, relationship to the insured, filing date.
-     - Consultation details: Total costs, consultation price, number of attachments.
-     - Treatments: Barcode, name, type, price, and availability.
+### File Reading
+- **Input Format**: JSON files containing:
+  - **Insured**: Name, affiliation number, registration ID.
+  - **Beneficiary**: Name, relationship to insured, filing date.
+  - **Consultation**: Total cost, consultation price, number of attachments.
+  - **Treatments**: Details for each treatment (barcode, name, type, price, availability).
 
-2. **Drug Reference Database**:
-   - Maintains a list of reference drugs with:
-     - Name of the drug.
-     - Reference price.
-     - Applicable reimbursement percentage.
+### Reference Drug Data
+- A database of reference drugs with:
+  - Drug name.
+  - Reference price.
+  - Reimbursement percentage.
 
-3. **Data Validation**:
-   - Verify non-empty names and affiliation numbers for insured persons.
-   - Ensure positive consultation prices and total costs.
-   - Validate the presence of treatment lists.
+### Data Validation
+- Insured name and affiliation number must be non-empty.
+- Consultation price and total cost must be positive.
+- Treatment list must not be empty.
 
-4. **Reimbursement Calculation**:
-   - Fixed percentage applied to consultation prices.
-   - Drug reimbursements calculated based on reference prices and rates.
+### Reimbursement Calculation
+- **Consultation**: Fixed reimbursement percentage applied to consultation cost.
+- **Treatments**: Reimbursements based on reference prices and percentages.
 
-5. **Processor Chaining**:
-   - Use `CompositeItemProcessor` to chain multiple sub-processors:
-     - `ValidationProcessor`: Validates input data.
-     - `CalculationProcessor`: Computes reimbursement amounts.
+### Processor Chaining
+- Combines multiple processors for validation and calculation:
+  1. **ValidationProcessor**: Ensures data integrity.
+  2. **CalculationProcessor**: Calculates reimbursement amounts.
 
-6. **Data Writing**:
-   - Archive processed files into a PostgreSQL database or output files.
+### Data Archiving
+- Stores processed data with total reimbursement amounts in:
+  - PostgreSQL database (primary storage).
+  - CSV/Excel files for backup.
 
 ---
 
@@ -86,16 +78,14 @@ mutual-claim-management
 │   │   ├── FlatFileItemReaderConfig.java
 │   │   └── ReimbursementJobConfig.java
 │   ├── processor/
+│   │   ├── ValidationProcessor.java
 │   │   ├── ConsultationProcessor.java
 │   │   ├── TreatmentMappingProcessor.java
 │   │   ├── TreatmentReimbursementProcessor.java
-│   │   ├── TotalReimbursementProcessor.java
-│   │   ├── DossierCompositeProcessor.java
-│   │   ├── DossierTreatmentMapper.java
-│   │   └── DossierValidationProcessor.java
+│   │   └── TotalReimbursementProcessor.java
 │   ├── reader/
-│   │   ├── CsvItemReader.java
-│   │   └── DossierJsonReader.java
+│   │   ├── JsonItemReader.java
+│   │   └── CsvItemReader.java
 │   └── writer/
 │       ├── CsvItemWriter.java
 │       └── DossierDatabaseWriter.java
@@ -120,49 +110,73 @@ mutual-claim-management
 │   └── ReimbursementService.java
 ├── resources/
 │   ├── application.properties
-│   ├── ref-des-medicaments-cnops-2014.csv
-│   ├── ref-des-medicaments-cnops-2014.xlk
-│   ├── ref-des-medicaments-cnops-2014.xlsx
-│   └── schema-postgresql.sql
+│   ├── ref.csv
+│   ├── schema-postgresql.sql
 └── test/
 ```
 
 ---
 
-## System Workflow
+## How It Works
 
-1. **Input**: JSON files containing insurance claims.
-2. **Validation**: Ensures that critical data is present and correct.
+1. **File Reading**:
+   - JSON data is parsed using `JsonItemReader`.
+   - Each claim is represented as a `Dossier` object.
+
+2. **Validation**:
+   - Ensures required fields are present and valid.
+
 3. **Reimbursement Calculation**:
-   - Consultation reimbursement.
-   - Treatment reimbursement based on reference drugs.
-4. **Output**: Processed data is saved in the database for archiving.
+   - **ConsultationProcessor**: Applies a fixed percentage to consultation costs.
+   - **TreatmentMappingProcessor**: Maps treatments to reference drugs.
+   - **TreatmentReimbursementProcessor**: Calculates reimbursement for each treatment.
+   - **TotalReimbursementProcessor**: Summarizes total reimbursements.
+
+4. **Data Writing**:
+   - Stores processed data into a PostgreSQL database via `DossierDatabaseWriter`.
 
 ---
 
-## Configurations
+## Setup and Run
 
-### `application.properties`
-```properties
-spring.application.name=Mini_project_insurance_claim_records
-spring.batch.job.enabled=true
+### Prerequisites
+- **Java 17** or later.
+- **Maven** for building the project.
+- **Docker** for database setup.
 
-# PostgreSQL Configuration
-spring.datasource.url=jdbc:postgresql://localhost:5432/reimbursement_db
-spring.datasource.username=postgres
-spring.datasource.password=password
-spring.jpa.hibernate.ddl-auto=create-drop
-spring.datasource.driver-class-name=org.postgresql.Driver
-spring.jpa.show-sql=true
+### Steps
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/mutual-claim-management.git
+   cd mutual-claim-management
+   ```
 
-# Input File
-file.input=ref-des-medicaments-cnops-2014.json
+2. Build the application:
+   ```bash
+   mvn clean install
+   ```
 
-# Virtual Threads
-spring.threads.virtual.enabled=true
-```
+3. Start PostgreSQL with Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
 
-### `Docker Compose` Configuration
+4. Run the application:
+   ```bash
+   mvn spring-boot:run
+   ```
+
+5. API Endpoints:
+   - **Trigger Job**: `http://localhost:8080/api/jobs/start`
+   - **Check Status**: `http://localhost:8080/api/jobs/status`
+
+---
+
+## Docker Integration
+
+The `docker-compose.yml` file includes configuration for a PostgreSQL database. Reference SQL schema is initialized from `schema-postgresql.sql`.
+
+### Sample Configuration
 ```yaml
 services:
   postgres:
@@ -172,34 +186,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: reimbursement_db
+    volumes:
+      - ./resources/schema-postgresql.sql:/docker-entrypoint-initdb.d/schema.sql
     ports:
       - "5432:5432"
-    volumes:
-      - ./src/main/resources/schema-postgresql.sql:/docker-entrypoint-initdb.d/schema.sql
 ```
-
----
-
-## How to Run
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/mutual-claim-management.git
-   cd mutual-claim-management
-   ```
-
-2. Start PostgreSQL using Docker Compose:
-   ```bash
-   docker-compose up -d
-   ```
-
-3. Build and run the Spring application:
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-
-4. Verify the application:
-   - **API**: `http://localhost:8080`
-   - **Database**: Check the `reimbursement_db`.
-
----
