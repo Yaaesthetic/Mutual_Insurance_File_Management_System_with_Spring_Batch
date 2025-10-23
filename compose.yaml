@@ -1,18 +1,28 @@
-# Docker Compose file for application with PostgreSQL database
+# Docker Compose file for application with PostgreSQL, Zipkin, and Prometheus
 
 services:
   # Application server service
-#  server:
-#    hostname: platform
-#    build:
-#      context: .
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
+  server:
+    hostname: Mutual_Insurance_File_Management_Sys
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+  #    environment:
+  #      # Optional: Configure your app to send traces to Zipkin (adjust as needed)
+  #      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+  #      # Optional: Enable full tracing sampling for development
+  #      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+  #      # Optional: Expose metrics endpoint for Prometheus scraping
+  #      MANAGEMENT_ENDPOINT_METRICS_ENABLED: true
+  #      MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED: true
 
-  # PostgreSQL database service
+  # PostgreSQL database service (unchanged from your original)
   postgres:
     hostname: postgres
     image: postgres
@@ -29,7 +39,31 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
     volumes:
       - ./src/main/resources/schema-postgresql.sql:/docker-entrypoint-initdb.d/schema.sql
 
+  # Zipkin service for distributed tracing
+  zipkin:
+    hostname: zipkin
+    image: openzipkin/zipkin:latest
+    ports:
+      - "9411:9411"  # Zipkin UI and API
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9411/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus service for metrics monitoring
+  prometheus:
+    hostname: prometheus
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"  # Prometheus UI
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml  # Mount a config file for scraping metrics
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

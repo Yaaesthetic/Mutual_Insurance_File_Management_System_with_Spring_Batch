@@ -13,14 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.regex.Pattern;
 
 @Component
 public class CsvItemReader implements ItemReader<TreatmentProduct> {
-
-    private static final Pattern CSV_PATTERN = Pattern.compile(
-            "^(\\d+),\"?([^\"]+?)\"?,\"?([^\"]+?)\"?,([\\d\\.]+),([\\d\\.]+)$"
-    );
 
     private final Iterator<TreatmentProduct> iterator;
 
@@ -32,7 +27,7 @@ public class CsvItemReader implements ItemReader<TreatmentProduct> {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
-            boolean isFirstLine = true;
+            boolean isFirstLine = true; // To skip the header
 
             while ((line = reader.readLine()) != null) {
                 if (isFirstLine) {
@@ -40,28 +35,40 @@ public class CsvItemReader implements ItemReader<TreatmentProduct> {
                     continue;
                 }
 
-                if (CSV_PATTERN.matcher(line).matches()) {
-                    String[] fields = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                if (line.trim().isEmpty()) {
+                    continue; // Skip empty lines
+                }
 
-                    if (fields.length < 5) {
-                        System.err.println("Skipping invalid row (less fields): " + line);
-                        continue;
-                    }
+                // The split logic is correct for handling commas within quoted fields,
+                // but the regex validation was incorrect for the file structure.
+                String[] fields = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
-                    try {
-                        TreatmentProduct product = new TreatmentProduct(
-                                Long.parseLong(fields[0]),            // CODE
-                                fields[1].replace("\"", ""),          // NOM
-                                fields[2].replace("\"", ""),          // DCI1
-                                Double.parseDouble(fields[3]),        // PRIXBR
-                                Double.parseDouble(fields[4])         // TAUXREMBOURSEMENT
-                        );
-                        products.add(product);
-                    } catch (NumberFormatException e) {
-                        System.err.println("Skipping invalid row (number format): " + line);
-                    }
-                } else {
-                    System.err.println("Skipping invalid format row: " + line);
+                // Your CSV file has 12 columns. Let's ensure the row has enough data.
+                // HEADER: CODE,NOM,DCI1,DOSAGE1,UNITE_DOSAGE1,FORME,PRESENTATION,PPV,PH,PRIX_BR,PRINCEPS_GENERIQUE,TAUX_REMBOURSEMENT
+                if (fields.length < 12) {
+                    System.err.println("Skipping invalid row (not enough columns): " + line);
+                    continue;
+                }
+
+                try {
+                    // We need to map to TreatmentProduct using the correct column indices.
+                    // CODE is at index 0
+                    // NOM is at index 1
+                    // DCI1 is at index 2
+                    // PRIX_BR is at index 9
+                    // TAUX_REMBOURSEMENT is at index 11
+                    TreatmentProduct product = new TreatmentProduct(
+                            Long.parseLong(fields[0].trim()),            // CODE (index 0)
+                            fields[1].replace("\"", "").trim(),          // NOM (index 1)
+                            fields[2].replace("\"", "").trim(),          // DCI1 (index 2)
+                            Double.parseDouble(fields[9].trim()),        // PRIX_BR (index 9)
+                            Double.parseDouble(fields[11].trim())        // TAUX_REMBOURSEMENT (index 11)
+                    );
+                    products.add(product);
+                } catch (NumberFormatException e) {
+                    System.err.println("Skipping row due to number format error: " + line);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    System.err.println("Skipping row due to missing columns: " + line);
                 }
             }
         }

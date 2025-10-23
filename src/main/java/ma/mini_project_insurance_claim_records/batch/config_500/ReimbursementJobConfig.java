@@ -1,5 +1,9 @@
 package ma.mini_project_insurance_claim_records.batch.config_500;
 
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.tracing.Tracer;
+
+import io.micrometer.tracing.handler.DefaultTracingObservationHandler;
 import ma.mini_project_insurance_claim_records.batch.reader.CsvItemReader;
 import ma.mini_project_insurance_claim_records.model.Dossier;
 import ma.mini_project_insurance_claim_records.model.TreatmentProduct;
@@ -26,6 +30,26 @@ public class ReimbursementJobConfig {
     Responsibility:
      Sets up the Spring Batch components, focus on job configuration.
      */
+
+    /*
+        Collect just metrics
+     */
+//    @Bean
+//    public ObservationRegistry observationRegistry() {
+//        return ObservationRegistry.create();
+//    }
+
+    /*
+        Collect just metrics and tracing also of jobs
+     */
+
+    @Bean
+    public ObservationRegistry observationRegistry(Tracer tracer) {
+        ObservationRegistry registry = ObservationRegistry.create();
+        registry.observationConfig().observationHandler(
+                new DefaultTracingObservationHandler(tracer));
+        return registry;
+    }
 
     @Bean
     public Step fetchReimbursementProductStep(JobRepository jobRepository,
