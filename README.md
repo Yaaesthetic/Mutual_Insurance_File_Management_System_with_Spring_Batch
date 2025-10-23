@@ -168,24 +168,169 @@ mutual-claim-management
 
 5. API Endpoints:
    - **Trigger Job**: `http://localhost:8080/api/start-batch`
+Here's the modified **Setup and Run** section with the corrected endpoint and example request:
+
 ---
 
-## Docker Integration
+## Setup and Run
 
-The `docker-compose.yml` file includes configuration for a PostgreSQL database. Reference SQL schema is initialized from `schema-postgresql.sql`.
+### Prerequisites
+- **Java 17** or later
+- **Maven** for building the project
+- **Docker** for database setup
 
-### Sample Configuration
-```yaml
-services:
-  postgres:
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: reimbursement_db
-    volumes:
-      - ./resources/schema-postgresql.sql:/docker-entrypoint-initdb.d/schema.sql
-    ports:
-      - "5432:5432"
+### Steps
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/mutual-claim-management.git
+   cd mutual-claim-management
+   ```
+
+2. Build the application:
+   ```bash
+   mvn clean install
+   ```
+
+3. Start PostgreSQL with Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. Run the application:
+   ```bash
+   mvn spring-boot:run
+   ```
+
+4. Trigger Batch Job
+
+**Endpoint**: `POST http://localhost:8080/start-batch`
+
+**Example Request**:
+```bash
+POST http://localhost:8080/start-batch
+Content-Type: application/json
+
+[
+  {
+    "numeroAffiliation": "A123456789",
+    "nomAssure": "Jean Dupont",
+    "immatriculation": "987654321",
+    "lienParente": "Père",
+    "montantTotalFrais": 25000,
+    "prixConsultation": 1500,
+    "nombrePiecesJointes": 3,
+    "nomBeneficiaire": "Marie Dupont",
+    "dateDepotDossier": "2024-04-15",
+    "traitements": [
+      {
+        "code": "MED123456",
+        "nom": "PARACETAMOL 500MG",
+        "quantite": 2,
+        "prixUnitaire": 450
+      },
+      {
+        "code": "MED654321",
+        "nom": "AMOXICILLINE 1G",
+        "quantite": 1,
+        "prixUnitaire": 800
+      }
+    ]
+  }
+]
+```
+
+**Expected Response**:
+```
+Batch job has been invoked. Status: COMPLETED
+```
+---
+
+## Spring Batch features for enhanced metrics, logging, and observability
+
+### Overview
+The application implements **comprehensive observability** using Spring Boot 3's native observability features with Micrometer, enabling real-time monitoring of batch job performance, health tracking, and distributed tracing provided by Spring Batch **5.1.4**
+
+### Metrics Collection
+
+Spring Batch automatically collects and exposes metrics under the `spring.batch` prefix through the **Observation API**.
+
+| Metric | Type | Description | Tags |
+|--------|------|-------------|------|
+| `spring.batch.job` | Timer | Duration of job execution | `name`, `status` |
+| `spring.batch.job.active` | Gauge | Currently active jobs | `name` |
+| `spring.batch.step` | Timer | Duration of step execution | `name`, `job.name`, `status` |
+| `spring.batch.step.active` | Gauge | Currently active steps | `name`, `job.name` |
+| `spring.batch.item.read` | Timer | Duration of item reading | `job.name`, `step.name`, `status` |
+| `spring.batch.item.process` | Timer | Duration of item processing | `job.name`, `step.name`, `status` |
+| `spring.batch.chunk.write` | Timer | Duration of chunk writing | `job.name`, `step.name`, `status` |
+
+
+### Distributed Tracing
+
+The system uses **Micrometer Tracing with Zipkin** to provide distributed tracing capabilities:[4][1]
+
+- **Trace Creation**: Automatic trace generation for each job execution
+- **Span Generation**: Individual spans for each step execution  
+- **Request Tracking**: Complete visibility into processing flow and latency
+- **Error Tracking**: Automatic error propagation in traces
+
+The `ObservationRegistry` bean is configured with `DefaultTracingObservationHandler` to enable tracing:[5]
+
+```java
+@Bean
+public ObservationRegistry observationRegistry(Tracer tracer) {
+    ObservationRegistry registry = ObservationRegistry.create();
+    registry.observationConfig().observationHandler(
+        new DefaultTracingObservationHandler(tracer));
+    return registry;
+}
+```
+
+
+### Prometheus Integration
+
+Metrics are exposed in **Prometheus format** for monitoring and alerting:[6][5]
+
+- **Endpoint**: `http://localhost:8080/actuator/prometheus`
+- **Format**: Compatible with Prometheus scraping
+- **Registry**: Automatic `PrometheusMeterRegistry` configuration
+
+### Actuator Endpoints
+
+The following **Spring Boot Actuator endpoints** are available for monitoring:[7]
+
+- `/actuator/metrics` - List all available metrics
+- `/actuator/metrics/{metric.name}` - Detailed metric information
+- `/actuator/prometheus` - Prometheus-formatted metrics
+- `/actuator/health` - Application health status
+- `/actuator/info` - Application information
+
+### Dependencies
+
+The observability stack requires the following dependencies:[5]
+
+```xml
+<!-- Spring Boot Actuator for metrics endpoints -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+
+<!-- Micrometer Tracing Bridge for distributed tracing -->
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-tracing-bridge-brave</artifactId>
+</dependency>
+
+<!-- Zipkin Reporter for trace export -->
+<dependency>
+    <groupId>io.zipkin.reporter2</groupId>
+    <artifactId>zipkin-reporter-brave</artifactId>
+</dependency>
+
+<!-- Prometheus Registry for metrics export -->
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
 ```
