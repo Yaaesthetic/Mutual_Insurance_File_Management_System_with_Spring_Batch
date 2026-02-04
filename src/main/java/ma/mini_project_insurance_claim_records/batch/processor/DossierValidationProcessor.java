@@ -7,7 +7,22 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 
 @Component
+/**
+ * Validates dossier data before processing.
+ * Checks for required fields and data integrity.
+ * 
+ * @author Yeasthetic
+ * @since 1.0
+ */
 public class DossierValidationProcessor implements ItemProcessor<Dossier, Dossier> {
+    
+    /**
+     * Validates a dossier and returns it if valid.
+     * 
+     * @param dossier the dossier to validate
+     * @return the validated dossier
+     * @throws IllegalArgumentException if validation fails
+     */
     //Responsibility:
     // Validates that essential information
     // (like String affiliationNumber, String beneficiaryName, String insuredName, LocalDate treatmentDate)
@@ -50,6 +65,10 @@ public class DossierValidationProcessor implements ItemProcessor<Dossier, Dossie
         if(dossier.getTreatments() == null || dossier.getTreatments().isEmpty()){
             throw new IllegalArgumentException("Treatments must be not vide.");
         }
+
+        if (dossier.getTreatments() == null || dossier.getTreatments().isEmpty()) {
+    throw new IllegalArgumentException("Dossier must contain at least one treatment");
+}
         // Return the valid dossier
         return dossier;
     }
