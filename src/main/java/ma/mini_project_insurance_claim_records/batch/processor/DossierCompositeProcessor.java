@@ -59,6 +59,7 @@ public class DossierCompositeProcessor implements ItemProcessor<Dossier, Dossier
         Double totalReimbursement = totalReimbursementProcessor.process(reimbursedTreatments);
         dossier.setReimbursedAmount(totalReimbursement);
         
+        // Return the fully processed dossier
         return dossier;
     }
 }
