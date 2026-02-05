@@ -6,15 +6,39 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
+/**
+ * Spring Batch {@link ItemProcessor} for validating dossier data integrity.
+ * 
+ * This processor is the first step in the dossier processing pipeline. It validates
+ * that all required fields are present and meet basic constraints before the dossier
+ * is passed to downstream processors. This approach implements fail-fast behavior,
+ * preventing resources from being wasted on invalid data.
+ * 
+ * Validations performed:
+ * <ul>
+ *   <li>Affiliation number is not empty</li>
+ *   <li>Insured person name is not empty</li>
+ *   <li>Beneficiary name is not empty</li>
+ *   <li>Dossier submission date is valid (not in the future)</li>
+ *   <li>Consultation price is positive</li>
+ *   <li>Total cost is positive</li>
+ *   <li>Treatments list is not empty</li>
+ * </ul>
+ * 
+ * @author Yeasthetic
+ * @version 1.0
+ * @since 1.0
+ */
 @Component
 public class DossierValidationProcessor implements ItemProcessor<Dossier, Dossier> {
-    //Responsibility:
-    // Validates that essential information
-    // (like String affiliationNumber, String beneficiaryName, String insuredName, LocalDate treatmentDate)
-    // is present and adheres to basic constraints (e.g., positive amounts).
-    //Justification:
-    // This processor only checks the data integrity of each dossier, adhering to by separating validation from other processing.
-
+    
+    /**
+     * Validates a dossier's data integrity.
+     * 
+     * @param dossier the dossier to validate
+     * @return the validated dossier if all validations pass
+     * @throws IllegalArgumentException if any validation fails
+     */
     @Override
     public Dossier process(Dossier dossier) throws Exception {
         // Validate Affiliation Number (should not be empty)
@@ -47,9 +71,11 @@ public class DossierValidationProcessor implements ItemProcessor<Dossier, Dossie
             throw new IllegalArgumentException("Total cost must be positive.");
         }
 
-        if(dossier.getTreatments() == null || dossier.getTreatments().isEmpty()){
-            throw new IllegalArgumentException("Treatments must be not vide.");
+        // Validate Treatments (should not be empty)
+        if (dossier.getTreatments() == null || dossier.getTreatments().isEmpty()) {
+            throw new IllegalArgumentException("Dossier must contain at least one treatment");
         }
+
         // Return the valid dossier
         return dossier;
     }
