@@ -16,6 +16,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * REST Controller for submitting and processing dossier batch jobs.
+ * 
+ * This controller provides endpoints for triggering batch processing jobs
+ * that handle insurance claim dossiers. It accepts dossier data in JSON format,
+ * stores it in a shared context, and launches the configured Spring Batch job
+ * to process the claims.
+ * 
+ * @author Yeasthetic
+ * @version 1.0
+ * @since 1.0
+ */
 @RestController
 @RequestMapping()
 public class BatchController {
@@ -29,6 +41,16 @@ public class BatchController {
     @Autowired
     private DossiersContext dossiersContext;
 
+    /**
+     * Processes a list of dossiers by launching a batch job.
+     * 
+     * This endpoint accepts JSON dossier data, stores it in a shared context,
+     * creates job parameters for uniqueness, and launches the main batch job
+     * for reimbursement calculation and persistence.
+     * 
+     * @param dossiers A list of {@link DossierDTO} objects containing claim information
+     * @return A {@link ResponseEntity} with success message and job status, or error message on failure
+     */
     @PostMapping("/start-batch")
     public ResponseEntity<String> processDossiers(@RequestBody List<DossierDTO> dossiers) {
         try {
