@@ -38,11 +38,11 @@ public class DossierCompositeProcessor implements ItemProcessor<Dossier, Dossier
     private final TotalReimbursementProcessor totalReimbursementProcessor;
 
     /**
-     * Processes a dossier through the complete transformation pipeline.
-     * 
+     * Orchestrates the full dossier processing pipeline: validation, treatment mapping, per-treatment reimbursement calculation, and total aggregation.
+     *
      * @param dossier the dossier to process
-     * @return the fully processed dossier with calculated reimbursement amount
-     * @throws Exception if any processor in the chain fails
+     * @return the same dossier instance with its reimbursed amount set to the computed total
+     * @throws Exception if any underlying processor fails during processing
      */
     @Override
     public Dossier process(Dossier dossier) throws Exception {
